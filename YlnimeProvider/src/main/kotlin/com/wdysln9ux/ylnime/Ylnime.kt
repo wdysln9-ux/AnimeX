@@ -3,7 +3,6 @@ package com.wdysln9ux.ylnime
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
@@ -132,30 +131,17 @@ class Ylnime : MainAPI() {
         // resolveAnimeIds, so use the same tracker fields without that helper.
         val malId = tracker?.malId
         val aniId = tracker?.aniId?.toIntOrNull()
-        var animeMetaData: MetaAnimeData? = null
-        if (malId != null || aniId != null) {
-            try {
-                animeMetaData = fetchAniZipMeta(malId, aniId)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-
         val pagePoster = imageFrom(doc.selectFirst(
             ".series-poster img, .anime-poster img, .detail-poster img, .poster img, " +
                 ".anime-cover img, .cover-image img, .anime-detail img, img.card-img-top"
         )) ?: imageFrom(doc.selectFirst("meta[property=og:image], meta[name=twitter:image]"))
-        val poster = tracker?.image
-            ?: animeMetaData?.images?.firstOrNull { it.coverType.equals("Poster", true) }?.url
-            ?: pagePoster
+        val poster = tracker?.image ?: pagePoster
 
         val pageBackground = imageFrom(doc.selectFirst(
             ".anime-banner img, .detail-banner img, .series-banner img, .backdrop img, " +
                 ".background img, .cover-bg img, [style*=background-image]"
         )) ?: imageFrom(doc.selectFirst("meta[property=og:image]"))
-        val background = animeMetaData?.images?.firstOrNull { it.coverType.equals("Fanart", true) }?.url
-            ?: tracker?.cover
-            ?: pageBackground
+        val background = tracker?.cover ?: pageBackground
 
         fun isBoilerplate(text: String): Boolean {
             val value = text.lowercase()
@@ -187,16 +173,7 @@ class Ylnime : MainAPI() {
             !it.isNullOrBlank() && !isBoilerplate(it.trim()) && !it.trim().equals(title, true)
         }?.trim()
 
-        val externalSynopsis = animeMetaData?.description?.replace(Regex("<.*?>"), "")?.trim()
-            ?.takeIf { it.isNotBlank() && !isBoilerplate(it) }
-            ?: animeMetaData?.episodes?.get("1")?.overview?.takeIf { it.isNotBlank() && !isBoilerplate(it) }
-            ?: try {
-                fetchAniListPlot(malId, aniId)?.takeIf { it.isNotBlank() && !isBoilerplate(it) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
-        val synopsis = externalSynopsis ?: pageSynopsis
+        val synopsis = pageSynopsis
 
         fun infoValue(vararg labels: String): String? {
             val wanted = labels.map { it.lowercase().replace(":", "").trim() }
@@ -269,7 +246,6 @@ class Ylnime : MainAPI() {
             this.showStatus = if (ongoing) ShowStatus.Ongoing else ShowStatus.Completed
             addMalId(malId)
             addAniListId(aniId)
-            try { addScore(animeMetaData?.episodes?.get("1")?.rating?.toString(), 10) } catch (_: Throwable) { }
         }
     }
 
