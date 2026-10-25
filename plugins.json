@@ -383,7 +383,7 @@
             "wdysln9-ux"
         ],
         "description": "YLnime \u2014 Anime Subtitle Indonesia",
-        "fileSize": 29819,
+        "fileSize": 46328,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "id",
         "tvTypes": [
@@ -393,6 +393,6 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=ylnime.com&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-9997682314052b72101d2b3b6235246a5a2896ad635f75f303431affea0706f8"
+        "fileHash": "sha256-af507154483914a75c52035c30563cf859a2ce2d7d07840a2928ed96687ea332"
     }
 ]
