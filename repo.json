@@ -4,6 +4,6 @@
     "description": "A curated collection of CloudStream extensions for anime and donghua, with Indonesian subtitles",
     "manifestVersion": 1,
     "pluginLists": [
-      "https://raw.githubusercontent.com/HatsuneMikuUwU/AnimeX/builds/plugins.json"
+      "https://raw.githubusercontent.com/Wdysln9-ux/AnimeX/builds/plugins.json"
     ]
 }
