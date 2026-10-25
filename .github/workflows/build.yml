@@ -1,3 +1,4 @@
+# Publishes generated CloudStream plugins to the builds branch.
 name: Build
 
 concurrency:
