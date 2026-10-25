@@ -197,7 +197,7 @@ class Animein : MainAPI() {
                 HomePageList(
                     request.name,
                     items,
-                    isHorizontalImages = request.data == "data/home/fyp"
+                    isHorizontalImages = false
                 )
             ),
             hasNext = request.data in pagedPaths && items.size >= PAGE_SIZE
