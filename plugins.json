@@ -372,5 +372,27 @@
         "iconUrl": "https://winbu.org/wp-content/uploads/2025/04/file-0000000068a051f6aed60f781c75581b-conversation-id-67ef899f-e0f8-8011-8643-02848517c045-message-i-1-e1744432620825.png",
         "apiVersion": 1,
         "fileHash": "sha256-a732328a039b25d64f07e0bddbfc49206e92688e2f7fae91afd601bba9d2de3c"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/YlnimeProvider.cs3",
+        "status": 1,
+        "version": 1,
+        "name": "YlnimeProvider",
+        "internalName": "YlnimeProvider",
+        "authors": [
+            "wdysln9-ux"
+        ],
+        "description": "YLnime \u2014 Anime Subtitle Indonesia",
+        "fileSize": 21408,
+        "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
+        "language": "id",
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "iconUrl": "https://www.google.com/s2/favicons?domain=ylnime.com&sz=%size%",
+        "apiVersion": 1,
+        "fileHash": "sha256-b10f2b94c8648e6c779f9ebeaad6bb16d4f58d51ba54ea9b04a1593f35daf526"
     }
 ]
