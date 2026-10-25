@@ -68,14 +68,14 @@
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/AnimeinProvider.cs3",
         "status": 1,
-        "version": 8,
+        "version": 9,
         "name": "AnimeinProvider",
         "internalName": "AnimeinProvider",
         "authors": [
             "Miku"
         ],
         "description": "Animein \u2014 Streaming Anime Subtitle Indonesia (API)",
-        "fileSize": 51116,
+        "fileSize": 50487,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "id",
         "tvTypes": [
@@ -85,7 +85,7 @@
         ],
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://animein.net&size=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-2ea98e9b5dab474e4ad985d4e68882414740219354afc3d4b8fcf6cf1de37dae"
+        "fileHash": "sha256-77c75df3ee4228fc2a4c70779b2a8d673f4415dd6ff8b83675f6e519e17bf104"
     },
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/AnimeSailProvider.cs3",
@@ -376,14 +376,14 @@
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/YlnimeProvider.cs3",
         "status": 1,
-        "version": 2,
+        "version": 3,
         "name": "YlnimeProvider",
         "internalName": "YlnimeProvider",
         "authors": [
             "wdysln9-ux"
         ],
         "description": "YLnime \u2014 Anime Subtitle Indonesia",
-        "fileSize": 27956,
+        "fileSize": 28920,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "id",
         "tvTypes": [
@@ -393,6 +393,6 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=ylnime.com&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-702100fc14d2fea6130b411c61ab6c3fef7131156d2f6eef35cf489eb743aa84"
+        "fileHash": "sha256-aa5761229d15a1b4e7859654c1e044574701d851e99f9bde03e038d5a5a2e00d"
     }
 ]
