@@ -373,9 +373,13 @@ class Ylnime : MainAPI() {
 
             if (!pageUrl.contains("reso=", true)) {
                 val separator = if (pageUrl.contains("?")) "&" else "?"
-                listOf("1080p", "720p", "480p", "360p").forEach { reso ->
+                // YLnime pages may expect either a numeric resolution or a "p" suffix.
+                // Try both forms so 1080p is not skipped when the site uses reso=1080.
+                listOf("1080", "1080p", "720", "720p", "480", "480p", "360", "360p").forEach { reso ->
                     val candidate = pageUrl + separator + "reso=" + reso
-                    if (resolutionUrls.none { it.contains("reso=" + reso, true) }) {
+                    if (resolutionUrls.none {
+                            it.substringAfter("reso=", "").substringBefore("&").equals(reso, true)
+                        }) {
                         resolutionUrls.add(candidate)
                     }
                 }
