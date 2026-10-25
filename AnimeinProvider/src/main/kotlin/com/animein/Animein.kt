@@ -194,11 +194,7 @@ class Animein : MainAPI() {
         }
         return newHomePageResponse(
             listOf(
-                HomePageList(
-                    request.name,
-                    items,
-                    isHorizontalImages = false
-                )
+                HomePageList(request.name, items)
             ),
             hasNext = request.data in pagedPaths && items.size >= PAGE_SIZE
         )
