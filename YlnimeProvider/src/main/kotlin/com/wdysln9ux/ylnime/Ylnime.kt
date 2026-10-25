@@ -146,7 +146,7 @@ class Ylnime : MainAPI() {
         val doc = app.get(pageUrl, referer = "$mainUrl/").document
         var found = false
         val html = doc.html()
-        val streams = Regex("""(?s)(?:const|let|var)\\s+streams\\s*=\\s*(\\[[\\s\\S]*?\\]);""")
+        val streams = Regex("""(?s)(?:const|let|var)\s+streams\s*=\s*(\[[\s\S]*?\]);""")
             .find(html)?.groupValues?.getOrNull(1)
         if (streams != null) {
             try {
