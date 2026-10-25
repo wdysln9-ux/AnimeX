@@ -32,10 +32,29 @@ jobs:
 
       - name: Checkout Builds Branch
         uses: actions/checkout@v7
+        continue-on-error: true
         with:
           ref: builds
           path: builds
           fetch-depth: 0
+
+      - name: Initialize Builds Branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ ! -d "${GITHUB_WORKSPACE}/builds/.git" ]; then
+            rm -rf "${GITHUB_WORKSPACE}/builds"
+            mkdir -p "${GITHUB_WORKSPACE}/builds"
+            git -C "${GITHUB_WORKSPACE}/builds" init -b builds
+          fi
+
+          git -C "${GITHUB_WORKSPACE}/builds" remote remove origin 2>/dev/null || true
+          git -C "${GITHUB_WORKSPACE}/builds" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if ! git -C "${GITHUB_WORKSPACE}/builds" rev-parse --verify HEAD >/dev/null 2>&1; then
+            git -C "${GITHUB_WORKSPACE}/builds" checkout --orphan builds
+          fi
 
       - name: Clean old builds
         run: |
