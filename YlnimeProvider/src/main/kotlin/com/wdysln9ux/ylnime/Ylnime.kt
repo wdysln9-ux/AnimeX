@@ -128,14 +128,10 @@ class Ylnime : MainAPI() {
             if (e is CancellationException) throw e
             null
         }
-        val ids = try {
-            resolveAnimeIds(listOf(title), TvType.Anime, null, tracker?.malId, tracker?.aniId?.toIntOrNull())
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-        val malId = ids?.malId ?: tracker?.malId
-        val aniId = ids?.aniId ?: tracker?.aniId?.toIntOrNull()
+        // Animein's tracker exposes these IDs directly; YLnime does not define
+        // resolveAnimeIds, so use the same tracker fields without that helper.
+        val malId = tracker?.malId
+        val aniId = tracker?.aniId?.toIntOrNull()
         var animeMetaData: MetaAnimeData? = null
         if (malId != null || aniId != null) {
             try {
