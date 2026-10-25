@@ -427,27 +427,45 @@ class Animein : MainAPI() {
         }
     }
 
-    private fun parseFyp(root: JSONObject?): List<SearchResponse> {
+    private suspend fun parseFyp(root: JSONObject?): List<SearchResponse> {
         if (root == null) return emptyList()
         val arr = arrayUnder(root, "fyp", "list", "items", anyArray = true)
-        return buildList {
-            for (i in 0 until arr.length()) {
-                val obj = arr.optJSONObject(i) ?: continue
-                val movieId = jStr(obj, "id_movie", "id") ?: continue
-                val anime = jStr(obj, "movie_title", "anime", "title") ?: continue
-                val epLabel = jStr(obj, "episode_title", "title")
-                val title = if (!epLabel.isNullOrBlank() && epLabel != anime) "$anime — $epLabel" else anime
-                val poster = fullUrl(
-                    jStr(obj, "url_thumbnail", "episode_poster", "image_cover", "poster", "image", "image_poster")
+        val results = mutableListOf<SearchResponse>()
+
+        for (i in 0 until arr.length()) {
+            val obj = arr.optJSONObject(i) ?: continue
+            val movieId = jStr(obj, "id_movie", "id") ?: continue
+            val anime = jStr(obj, "movie_title", "anime", "title") ?: continue
+            val epLabel = jStr(obj, "episode_title", "title")
+            val title = if (!epLabel.isNullOrBlank() && epLabel != anime) "$anime — $epLabel" else anime
+
+            // Prefer the canonical anime poster from the tracker (AniList/MAL),
+            // not the episode thumbnail used by the FYP feed.
+            val year = yearOf(obj)
+            val tracker = try {
+                APIHolder.getTracker(
+                    listOf(anime),
+                    TrackerType.getTypes(TvType.Anime),
+                    year,
+                    true
                 )
-                add(
-                    newAnimeSearchResponse(title, "$API_BASE/3/2/movie/detail/$movieId", TvType.Anime) {
-                        this.posterUrl = poster
-                        this.posterHeaders = imageHeaders
-                    }
-                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
             }
+            val poster = tracker?.image
+                ?: fullUrl(jStr(obj, "image_poster", "image_cover", "poster", "image"))
+                ?: fullUrl(jStr(obj, "url_thumbnail", "episode_poster"))
+
+            results.add(
+                newAnimeSearchResponse(title, "$API_BASE/3/2/movie/detail/$movieId", TvType.Anime) {
+                    this.posterUrl = poster
+                    this.posterHeaders = imageHeaders
+                    this.year = year
+                }
+            )
         }
+        return results
     }
 
     private fun parseEpisodes(
