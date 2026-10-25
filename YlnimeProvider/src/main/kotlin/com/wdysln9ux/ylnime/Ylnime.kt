@@ -143,57 +143,109 @@ class Ylnime : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val pageUrl = normalizeUrl(data) ?: data
-        val doc = app.get(pageUrl, referer = "$mainUrl/").document
-        var found = false
-        val html = doc.html()
-        val streams = Regex("""(?s)(?:const|let|var)\s+streams\s*=\s*(\[[\s\S]*?\]);""")
-            .find(html)?.groupValues?.getOrNull(1)
-        if (streams != null) {
-            try {
-                val arr = JSONArray(streams)
-                for (i in 0 until arr.length()) {
-                    val item = arr.optJSONObject(i) ?: continue
-                    val streamUrl = item.optString("link").replace("\\/", "/")
-                    if (!streamUrl.startsWith("http")) continue
-                    val quality = Regex("(1080|720|480|360)").find(
-                        item.optString("reso") + " " + streamUrl
-                    )?.groupValues?.getOrNull(1)?.toIntOrNull() ?: Qualities.Unknown.value
-                    if (streamUrl.contains(".m3u8", true)) {
-                        M3u8Helper.generateM3u8("YLnime", streamUrl, pageUrl).forEach { link ->
-                            callback(newExtractorLink("YLnime", "YLnime", link.url, INFER_TYPE) {
-                                this.referer = pageUrl
+        val collected = mutableListOf<ExtractorLink>()
+        val visitedPages = linkedSetOf(pageUrl)
+
+        fun qualityFrom(value: String): Int =
+            Regex("(1080|720|480|360)")
+                .find(value)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?: Qualities.Unknown.value
+
+        suspend fun collectStreams(url: String, html: String) {
+            val streams = Regex("""(?s)(?:const|let|var)\s+streams\s*=\s*(\[[\s\S]*?\]);""")
+                .find(html)?.groupValues?.getOrNull(1)
+
+            if (streams != null) {
+                try {
+                    val arr = JSONArray(streams)
+                    for (i in 0 until arr.length()) {
+                        val item = arr.optJSONObject(i) ?: continue
+                        val streamUrl = item.optString("link").replace("\\/", "/").trim()
+                        if (!streamUrl.startsWith("http")) continue
+
+                        val quality = qualityFrom(item.optString("reso") + " " + streamUrl)
+                        val server = when {
+                            streamUrl.contains("pixeldrain", true) -> "Pixeldrain"
+                            streamUrl.contains("googlevideo", true) ||
+                                streamUrl.contains("blogger", true) -> "Blogger"
+                            streamUrl.contains("vidhide", true) -> "VidHide"
+                            streamUrl.contains("animekita", true) -> "YLnime CDN"
+                            else -> "YLnime Server"
+                        }
+                        val label = server + if (quality > 0) " " + quality + "p" else ""
+
+                        if (streamUrl.contains(".m3u8", true)) {
+                            M3u8Helper.generateM3u8(server, streamUrl, url).forEach { link ->
+                                collected.add(newExtractorLink(server, label, link.url, INFER_TYPE) {
+                                    this.referer = url
+                                    this.quality = quality
+                                })
+                            }
+                        } else {
+                            collected.add(newExtractorLink(server, label, streamUrl, INFER_TYPE) {
+                                this.referer = url
                                 this.quality = quality
                             })
                         }
-                    } else {
-                        callback(newExtractorLink("YLnime", "YLnime", streamUrl, INFER_TYPE) {
-                            this.referer = pageUrl
-                            this.quality = quality
-                        })
                     }
-                    found = true
+                } catch (_: Exception) { }
+            }
+        }
+
+        try {
+            val baseDoc = app.get(pageUrl, referer = "$mainUrl/").document
+            collectStreams(pageUrl, baseDoc.html())
+
+            val resolutionUrls = baseDoc.select("a[href*='reso=']")
+                .mapNotNull { normalizeUrl(it.attr("href")) }
+                .distinct()
+                .sortedByDescending { qualityFrom(it) }
+                .toMutableList()
+
+            if (!pageUrl.contains("reso=", true)) {
+                val separator = if (pageUrl.contains("?")) "&" else "?"
+                listOf("1080p", "720p", "480p", "360p").forEach { reso ->
+                    val candidate = pageUrl + separator + "reso=" + reso
+                    if (resolutionUrls.none { it.contains("reso=" + reso, true) }) {
+                        resolutionUrls.add(candidate)
+                    }
                 }
-            } catch (_: Exception) { }
-        }
-        doc.select("video source[src], video[src]").forEach { element ->
-            val src = normalizeUrl(element.attr("src")) ?: return@forEach
-            callback(newExtractorLink("YLnime", "YLnime direct", src, INFER_TYPE) {
-                this.referer = pageUrl
-            })
-            found = true
-        }
-        doc.select("iframe[src], a[href]").forEach { element ->
-            val raw = if (element.tagName() == "iframe") element.attr("src") else element.attr("href")
-            val src = normalizeUrl(raw) ?: return@forEach
-            if (src.contains("ylnime.com") || src.contains("facebook.com") ||
-                src.contains("telegram", true) || src.contains("ads", true)) return@forEach
-            try {
-                loadExtractor(src, pageUrl, subtitleCallback) { link ->
-                    callback(link)
-                    found = true
+            }
+
+            for (resolutionUrl in resolutionUrls.distinct()) {
+                if (!visitedPages.add(resolutionUrl)) continue
+                try {
+                    val resolutionDoc = app.get(resolutionUrl, referer = pageUrl).document
+                    collectStreams(resolutionUrl, resolutionDoc.html())
+                } catch (_: Exception) {
+                    // Some episodes do not have every resolution.
                 }
-            } catch (_: Exception) { }
+            }
+
+            baseDoc.select("video source[src], video[src]").forEach { element ->
+                val src = normalizeUrl(element.attr("src")) ?: return@forEach
+                collected.add(newExtractorLink("YLnime", "YLnime Direct", src, INFER_TYPE) {
+                    this.referer = pageUrl
+                    this.quality = qualityFrom(src)
+                })
+            }
+
+            baseDoc.select("iframe[src]").forEach { iframe ->
+                val src = normalizeUrl(iframe.attr("src")) ?: return@forEach
+                if (src.contains("ads", true) || src.contains("facebook", true) ||
+                    src.contains("cbox", true)) return@forEach
+                try {
+                    loadExtractor(src, pageUrl, subtitleCallback) { link ->
+                        collected.add(link)
+                    }
+                } catch (_: Exception) { }
+            }
+        } catch (_: Exception) {
+            // Return any links collected before a network error.
         }
-        return found
+
+        val sortedLinks = collected.distinctBy { it.url }.sortedByDescending { it.quality }
+        sortedLinks.forEach(callback)
+        return sortedLinks.isNotEmpty()
     }
 }
