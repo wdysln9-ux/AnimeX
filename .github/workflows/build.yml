@@ -84,7 +84,7 @@ jobs:
           chmod +x gradlew
           ./gradlew make makePluginsJson --no-daemon --stacktrace --refresh-dependencies
 
-          shopt -s nullglob
+          shopt -s globstar nullglob
           files=(**/build/*.cs3)
           if [ ${#files[@]} -eq 0 ]; then
             echo "ERROR: no .cs3 files produced"
@@ -120,10 +120,7 @@ jobs:
             exit 0
           fi
 
-          if git rev-parse --verify HEAD >/dev/null 2>&1; then
-            git commit -m "Build ${GITHUB_SHA}"
-          else
-            git commit --allow-empty -m "Build ${GITHUB_SHA}"
-          fi
+          git commit -m "Build ${GITHUB_SHA}"
 
-          git push origin HEAD:builds --force-with-lease
+          # The builds branch is generated output; replace it with this build.
+          git push origin HEAD:refs/heads/builds --force
