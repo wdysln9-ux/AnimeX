@@ -159,10 +159,9 @@ class Animein : MainAPI() {
     override val mainPage = mainPageOf(
         "data/home/list_new_episode" to "Episode Baru",
         "3/2/home/hot" to "Sedang Hangat",
-        "3/2/home/new" to "Judul Baru",
-        "schedule/today" to "Jadwal Hari ini",
         "data/home/fyp" to "Jas Por Yu",
-        "3/2/home/popular" to "Paling Populer",
+        "schedule/today" to "Jadwal Hari ini",
+        "3/2/home/new" to "Judul Baru",
         "data/home/list" to "Paling Dinanti"
     )
 
