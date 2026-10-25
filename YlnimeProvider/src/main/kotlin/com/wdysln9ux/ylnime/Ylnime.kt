@@ -268,7 +268,7 @@ class Ylnime : MainAPI() {
             this.backgroundPosterUrl = background
             this.plot = synopsis
             this.tags = tags.ifEmpty { null }
-            this.year = year ?: animeMetaData?.airedEpisodes?.firstOrNull()?.airDateUtc?.take(4)?.toIntOrNull()
+            this.year = year
             this.duration = duration
             this.showStatus = if (ongoing) ShowStatus.Ongoing else ShowStatus.Completed
             addMalId(malId)
