@@ -274,15 +274,7 @@ class Animein : MainAPI() {
 
         val poster = fullUrl(jStr(movieObj, "image_poster") ?: jStr(movieObj, "image_cover"))
         val coverUrl = fullUrl(jStr(movieObj, "image_cover"))
-        val rawPlot = cleanText(jStr(movieObj, "synopsis", "description"))
-        val plot = rawPlot?.takeIf { description ->
-            description.length > 35 &&
-                !description.contains("nonton streaming", true) &&
-                !description.contains("kualitas 360p", true) &&
-                !description.contains("update cepat tanpa iklan", true) &&
-                !description.contains("subtitle indonesia, update", true) &&
-                !description.contains("gratis di animein", true)
-        }
+        val plot = cleanText(jStr(movieObj, "synopsis", "description"))
         val year = yearOf(movieObj)
         val statusStr = jStr(movieObj, "status")
         val typeStr = jStr(movieObj, "type")
@@ -328,9 +320,7 @@ class Animein : MainAPI() {
             appLangCode = "en"
         )
 
-        val backgroundposter = coverUrl
-            ?: animeMetaData?.images?.find { it.coverType == "Fanart" }?.url
-            ?: tracker?.cover
+        val backgroundposter = animeMetaData?.images?.find { it.coverType == "Fanart" }?.url ?: tracker?.cover
 
         // Prefer the synopsis provided directly by Animein.
         // External metadata is only a fallback when Animein has no synopsis.
@@ -339,12 +329,7 @@ class Animein : MainAPI() {
             ?: animeMetaData?.episodes?.get("1")?.overview?.takeIf { it.isNotBlank() }
             ?: fetchAniListPlot(malId, aniId)
         val finalPlot = plot?.takeIf { it.isNotBlank() }
-            ?: externalPlot?.takeIf {
-                it.isNotBlank() &&
-                    !it.contains("nonton streaming", true) &&
-                    !it.contains("kualitas 360p", true) &&
-                    !it.contains("update cepat tanpa iklan", true)
-            }
+            ?: externalPlot?.takeIf { it.isNotBlank() }
 
         val epRoot = api("3/2/movie/episode/$id")
         var epArray = epRoot?.let { arrayUnder(it, "episode", "episodes", "list") } ?: JSONArray()
@@ -456,22 +441,23 @@ class Animein : MainAPI() {
             val epLabel = jStr(obj, "episode_title", "title")
             val title = if (!epLabel.isNullOrBlank() && epLabel != anime) "$anime — $epLabel" else anime
 
-            // Prefer the image attached to this Animein item. Tracker images are
-            // only a fallback; otherwise unrelated titles can share the same poster.
+            // Prefer the canonical anime poster from the tracker (AniList/MAL),
+            // not the episode thumbnail used by the FYP feed.
             val year = yearOf(obj)
-            val poster = fullUrl(jStr(obj, "image_poster", "image_cover", "poster", "image"))
+            val tracker = try {
+                APIHolder.getTracker(
+                    listOf(anime),
+                    TrackerType.getTypes(TvType.Anime),
+                    year,
+                    true
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+            val poster = tracker?.image
+                ?: fullUrl(jStr(obj, "image_poster", "image_cover", "poster", "image"))
                 ?: fullUrl(jStr(obj, "url_thumbnail", "episode_poster"))
-                ?: try {
-                    APIHolder.getTracker(
-                        listOf(anime),
-                        TrackerType.getTypes(TvType.Anime),
-                        year,
-                        true
-                    )?.image
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                }
 
             results.add(
                 newAnimeSearchResponse(title, "$API_BASE/3/2/movie/detail/$movieId", TvType.Anime) {
