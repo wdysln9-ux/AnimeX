@@ -173,7 +173,16 @@ class Ylnime : MainAPI() {
             !it.isNullOrBlank() && !isBoilerplate(it.trim()) && !it.trim().equals(title, true)
         }?.trim()
 
-        val synopsis = pageSynopsis
+        // YLnime's meta description is often SEO boilerplate. Use the shared
+        // AniList synopsis lookup as a fallback, like Animein does, before showing it.
+        val trackerSynopsis = try {
+            fetchAniListPlot(malId, aniId)?.trim()
+                ?.takeIf { it.isNotBlank() && !isBoilerplate(it) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+        val synopsis = trackerSynopsis ?: pageSynopsis
 
         fun infoValue(vararg labels: String): String? {
             val wanted = labels.map { it.lowercase().replace(":", "").trim() }
