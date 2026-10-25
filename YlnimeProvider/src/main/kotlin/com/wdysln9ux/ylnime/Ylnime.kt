@@ -89,6 +89,74 @@ class Ylnime : MainAPI() {
             .distinctBy { it.url }
     }
 
+    private fun titleKey(value: String): String = value.lowercase()
+        .replace(Regex("\\\\([^)]*\\\\)|\\\\[[^]]*]"), " ")
+        .replace(Regex("(?i)season\\\\s*\\\\d+|part\\\\s*\\\\d+|subtitle indonesia|sub indo"), " ")
+        .replace(Regex("[^\\\\p{L}\\\\p{N}]"), "")
+
+    // Kitsu supplies episode titles; YLnime remains the source for stream URLs and detail metadata.
+    private suspend fun kitsuEpisodeTitles(title: String, year: Int?, episodeNumbers: Set<Int>): Map<Int, String> {
+        if (episodeNumbers.isEmpty()) return emptyMap()
+        return try {
+            val query = java.net.URLEncoder.encode(title, "UTF-8")
+            val search = app.get(
+                "https://kitsu.io/api/edge/anime?filter[text]=$query&page[limit]=10&sort=popularityRank",
+                headers = mapOf("Accept" to "application/vnd.api+json")
+            ).text
+            val results = org.json.JSONObject(search).optJSONArray("data") ?: return emptyMap()
+            val wanted = titleKey(title)
+            var chosen: org.json.JSONObject? = null
+            var chosenScore = -1
+            for (i in 0 until results.length()) {
+                val item = results.optJSONObject(i) ?: continue
+                val attrs = item.optJSONObject("attributes") ?: continue
+                val titles = attrs.optJSONObject("titles")
+                val names = listOfNotNull(
+                    attrs.optString("canonicalTitle").takeIf { it.isNotBlank() },
+                    titles?.optString("en_jp")?.takeIf { it.isNotBlank() },
+                    titles?.optString("en")?.takeIf { it.isNotBlank() },
+                    titles?.optString("ja_jp")?.takeIf { it.isNotBlank() }
+                ).map { titleKey(it) }
+                val exact = names.any { it == wanted }
+                val close = names.any { it.length >= 5 && wanted.length >= 5 && (it.contains(wanted) || wanted.contains(it)) }
+                if (!exact && !close) continue
+                val foundYear = Regex("^\\\\d{4}").find(attrs.optString("startDate"))?.value?.toIntOrNull()
+                if (year != null && foundYear != null && kotlin.math.abs(year - foundYear) > 1) continue
+                val score = (if (exact) 100 else 10) - if (year != null && foundYear != null) kotlin.math.abs(year - foundYear) else 0
+                if (score > chosenScore) {
+                    chosen = item
+                    chosenScore = score
+                }
+            }
+            val anime = chosen ?: return emptyMap()
+            val id = anime.optString("id")
+            if (id.isBlank()) return emptyMap()
+            val maxEpisode = episodeNumbers.maxOrNull() ?: return emptyMap()
+            val limit = 20
+            val pages = minOf(10, (maxEpisode + limit - 1) / limit)
+            val titlesByNumber = mutableMapOf<Int, String>()
+            for (page in 0 until pages) {
+                val episodesJson = app.get(
+                    "https://kitsu.io/api/edge/anime/$id/episodes?page[limit]=$limit&page[offset]=${page * limit}&sort=number",
+                    headers = mapOf("Accept" to "application/vnd.api+json")
+                ).text
+                val data = org.json.JSONObject(episodesJson).optJSONArray("data") ?: continue
+                for (i in 0 until data.length()) {
+                    val episode = data.optJSONObject(i) ?: continue
+                    val attrs = episode.optJSONObject("attributes") ?: continue
+                    val number = attrs.optInt("number", -1)
+                    val episodeTitle = attrs.optString("canonicalTitle").trim()
+                    if (number in episodeNumbers && episodeTitle.isNotBlank() && episodeTitle != "null") {
+                        titlesByNumber[number] = episodeTitle
+                    }
+                }
+            }
+            titlesByNumber
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
     override suspend fun load(url: String): LoadResponse {
         val fixedUrl = normalizeUrl(url) ?: url
         val doc = app.get(fixedUrl, referer = "$mainUrl/").document
@@ -191,19 +259,25 @@ class Ylnime : MainAPI() {
             infoValue("status") ?: allText
         )
         val episodeAnchors = doc.select("a[href*=episode=], a[href*=episode-], a[href*=episode/], .episode-list a, .episodes a")
-        val episodes = episodeAnchors.mapNotNull { anchor ->
+        val rawEpisodes = episodeAnchors.mapNotNull { anchor ->
             val epUrl = normalizeUrl(anchor.attr("href")) ?: return@mapNotNull null
             if (epUrl == fixedUrl || epUrl.contains("javascript:", true)) return@mapNotNull null
-            val label = anchor.text().replace(Regex("\\s+"), " ").trim()
-            val number = Regex("(?i)(?:episode|ep\\.?|eps?)\\s*[-:#]?\\s*(\\d+(?:\\.\\d+)?)")
+            val label = anchor.text().replace(Regex("\\\\s+"), " ").trim()
+            val number = Regex("(?i)(?:episode|ep\\\\.?|eps?)\\\\s*[-:#]?\\\\s*(\\\\d+(?:\\\\.\\\\d+)?)")
                 .find(label.ifBlank { anchor.attr("title") + " " + epUrl })
                 ?.groupValues?.getOrNull(1)?.toDoubleOrNull()
             if (label.isBlank() && number == null) return@mapNotNull null
+            Triple(epUrl, label, number?.toInt())
+        }.distinctBy { it.first }.sortedBy { it.third ?: 0 }
+
+        val kitsuTitles = kitsuEpisodeTitles(title, year, rawEpisodes.mapNotNull { it.third }.toSet())
+        val episodes = rawEpisodes.map { (epUrl, pageLabel, number) ->
             newEpisode(epUrl) {
-                name = label.ifBlank { number?.let { "Episode ${it.toInt()}" } ?: "Episode" }
-                episode = number?.toInt()
+                name = number?.let { kitsuTitles[it] }?.takeIf { it.isNotBlank() }
+                    ?: pageLabel.ifBlank { number?.let { "Episode $it" } ?: "Episode" }
+                episode = number
             }
-        }.distinctBy { it.data }.sortedBy { it.episode ?: 0 }
+        }
 
         val movie = fixedUrl.contains("movie", true) ||
             doc.select(".badge, small, .type").any { it.text().contains("movie", true) } ||
