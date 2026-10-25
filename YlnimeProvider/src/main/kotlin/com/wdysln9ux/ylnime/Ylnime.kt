@@ -85,53 +85,111 @@ class Ylnime : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val fixedUrl = normalizeUrl(url) ?: url
         val doc = app.get(fixedUrl, referer = "$mainUrl/").document
-        val title = (doc.selectFirst("h1")?.text()
+        val title = (doc.selectFirst("h1, h2.title, .anime-title")
+            ?.text()?.takeIf { it.isNotBlank() }
             ?: doc.selectFirst("meta[property=og:title]")?.attr("content")
             ?: doc.title())
-            .replace("Nonton Anime ", "", ignoreCase = true)
-            .replace("Nonton ", "", ignoreCase = true)
-            .replace("Sub Indo HD", "", ignoreCase = true)
-            .replace("Sub Indo", "", ignoreCase = true)
+            .replace(Regex("(?i)^nonton\\s+anime\\s*"), "")
+            .replace(Regex("(?i)^nonton\\s*"), "")
+            .replace(Regex("(?i)\\s*[-|]\\s*YLnime.*$"), "")
+            .replace(Regex("(?i)\\s*sub indo(\\s+hd)?"), "")
             .trim()
+
         val poster = normalizeUrl(
-            doc.selectFirst("meta[property=og:image]")?.attr("content")
-                ?: doc.selectFirst("img.card-img-top, .series-poster img")?.let {
-                    it.attr("src").ifBlank { it.attr("data-src") }
+            doc.selectFirst("meta[property=og:image], meta[name=twitter:image]")?.attr("content")
+                ?.takeIf { it.isNotBlank() }
+                ?: doc.selectFirst(
+                    ".series-poster img, .anime-poster img, img.card-img-top, .detail-poster img, .poster img, article img"
+                )?.let { image ->
+                    image.attr("data-src").ifBlank {
+                        image.attr("data-lazy-src").ifBlank { image.attr("src") }
+                    }
                 }
         )
-        val plot = doc.select("div.synopsis, p.synopsis, div.description, .content p")
-            .text().trim().takeIf { it.isNotBlank() }
-        val tags = doc.select("div.genres a, span.badge")
-            .map { it.text().trim() }
-            .filter { it.length > 1 && !it.contains("episode", true) && !it.contains("sub indo", true) }
-            .distinct()
-        val ongoing = doc.text().contains("Ongoing", true) ||
-            doc.text().contains("Sedang Tayang", true)
-        val episodes = doc.select("a[href*=episode=]")
-            .mapNotNull { a ->
-                val epUrl = normalizeUrl(a.attr("href")) ?: return@mapNotNull null
-                val label = a.text().replace(Regex("\\s+"), " ").trim()
-                val number = Regex("(?i)episode\\s*(\\d+)").find(label)
-                    ?.groupValues?.getOrNull(1)?.toIntOrNull()
-                newEpisode(epUrl) {
-                    name = label.ifBlank { number?.let { "Episode $it" } ?: "Episode" }
-                    episode = number
+        val background = normalizeUrl(
+            doc.selectFirst("meta[property=og:image]")?.attr("content")
+        )
+        val synopsisSelectors = listOf(
+            ".synopsis", "#synopsis", ".anime-synopsis", ".series-synopsis",
+            ".description", ".anime-description", ".detail-synopsis",
+            "[itemprop=description]", "meta[name=description]"
+        )
+        val synopsis = synopsisSelectors.asSequence().mapNotNull { selector ->
+            val element = doc.selectFirst(selector) ?: return@mapNotNull null
+            if (element.tagName() == "meta") element.attr("content").trim()
+            else element.text().trim()
+        }.firstOrNull { it.isNotBlank() && !it.equals(title, true) }
+            ?: doc.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+                ?.takeIf { it.isNotBlank() }
+
+        fun infoValue(vararg labels: String): String? {
+            val wanted = labels.map { it.lowercase().replace(":", "").trim() }
+            for (row in doc.select("tr, .info-item, .anime-info li, .detail-info li, .series-info li, .meta-item")) {
+                val label = row.selectFirst("th, .label, .name, strong, b")?.text()
+                    ?: row.ownText().substringBefore(":")
+                if (wanted.any { label.lowercase().replace(":", "").trim().contains(it) }) {
+                    val value = row.selectFirst("td, .value, .content")?.text()
+                        ?: row.text().substringAfter(":", "").trim()
+                    if (value.isNotBlank() && value != row.text().trim()) return value
                 }
-            }.distinctBy { it.data }.sortedBy { it.episode ?: 0 }
+            }
+            return null
+        }
+
+        val allText = doc.text()
+        val year = Regex("(?:19|20)\\d{2}").find(
+            infoValue("tahun", "year", "rilis", "released") ?: allText
+        )?.value?.toIntOrNull()
+        val duration = Regex("(\\d{1,3})\\s*(?:menit|min)").find(
+            infoValue("durasi", "duration") ?: allText
+        )?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val tags = doc.select(
+            ".genres a, .genre a, a[href*=genre], .anime-genres a, .badge.genre, .tags a"
+        ).map { it.text().trim() }
+            .filter { it.length > 1 && !it.contains("episode", true) &&
+                !it.contains("sub indo", true) && !it.contains("watch", true) }
+            .distinct()
+
+        val ongoing = Regex("(?i)ongoing|sedang tayang|currently airing").containsMatchIn(
+            infoValue("status") ?: allText
+        )
+        val episodeAnchors = doc.select("a[href*=episode=], a[href*=episode-], a[href*=episode/], .episode-list a, .episodes a")
+        val episodes = episodeAnchors.mapNotNull { anchor ->
+            val epUrl = normalizeUrl(anchor.attr("href")) ?: return@mapNotNull null
+            if (epUrl == fixedUrl || epUrl.contains("javascript:", true)) return@mapNotNull null
+            val label = anchor.text().replace(Regex("\\s+"), " ").trim()
+            val number = Regex("(?i)(?:episode|ep\\.?|eps?)\\s*[-:#]?\\s*(\\d+(?:\\.\\d+)?)")
+                .find(label.ifBlank { anchor.attr("title") + " " + epUrl })
+                ?.groupValues?.getOrNull(1)?.toDoubleOrNull()
+            if (label.isBlank() && number == null) return@mapNotNull null
+            newEpisode(epUrl) {
+                name = label.ifBlank { number?.let { "Episode ${it.toInt()}" } ?: "Episode" }
+                episode = number?.toInt()
+            }
+        }.distinctBy { it.data }.sortedBy { it.episode ?: 0 }
 
         val movie = fixedUrl.contains("movie", true) ||
-            doc.select("small, .badge").any { it.text().contains("movie", true) }
+            doc.select(".badge, small, .type").any { it.text().contains("movie", true) } ||
+            infoValue("tipe", "type", "format")?.contains("movie", true) == true
         if (movie && episodes.size <= 1) {
-            return newMovieLoadResponse(title, fixedUrl, TvType.AnimeMovie, episodes.firstOrNull()?.data ?: fixedUrl) {
+            return newMovieLoadResponse(
+                title, fixedUrl, TvType.AnimeMovie, episodes.firstOrNull()?.data ?: fixedUrl
+            ) {
                 this.posterUrl = poster
-                this.plot = plot
+                this.backgroundPosterUrl = background
+                this.plot = synopsis
                 this.tags = tags.ifEmpty { null }
+                this.year = year
+                this.duration = duration
             }
         }
         return newTvSeriesLoadResponse(title, fixedUrl, TvType.Anime, episodes) {
             this.posterUrl = poster
-            this.plot = plot
+            this.backgroundPosterUrl = background
+            this.plot = synopsis
             this.tags = tags.ifEmpty { null }
+            this.year = year
+            this.duration = duration
             this.showStatus = if (ongoing) ShowStatus.Ongoing else ShowStatus.Completed
         }
     }
