@@ -322,11 +322,14 @@ class Animein : MainAPI() {
 
         val backgroundposter = animeMetaData?.images?.find { it.coverType == "Fanart" }?.url ?: tracker?.cover
 
+        // Prefer the synopsis provided directly by Animein.
+        // External metadata is only a fallback when Animein has no synopsis.
         val apiDescription = animeMetaData?.description?.replace(Regex("<.*?>"), "")
-        val rawPlot = apiDescription?.takeIf { it.isNotBlank() }
+        val externalPlot = apiDescription?.takeIf { it.isNotBlank() }
             ?: animeMetaData?.episodes?.get("1")?.overview?.takeIf { it.isNotBlank() }
             ?: fetchAniListPlot(malId, aniId)
-        val finalPlot = rawPlot?.takeIf { it.isNotBlank() } ?: plot
+        val finalPlot = plot?.takeIf { it.isNotBlank() }
+            ?: externalPlot?.takeIf { it.isNotBlank() }
 
         val epRoot = api("3/2/movie/episode/$id")
         var epArray = epRoot?.let { arrayUnder(it, "episode", "episodes", "list") } ?: JSONArray()
