@@ -49,8 +49,15 @@ class Ylnime : MainAPI() {
             .trim()
         if (title.isBlank()) return null
         val image = selectFirst("img")?.let {
-            it.attr("src").takeIf { src -> src.isNotBlank() && !src.contains("placeholder", true) }
-                ?: it.attr("data-src").ifBlank { it.attr("data-lazy-src") }
+            listOf("data-src", "data-lazy-src", "data-original", "data-original-src", "data-lazy", "src")
+                .asSequence()
+                .map { attr -> it.attr(attr).trim() }
+                .firstOrNull { src ->
+                    src.isNotBlank() &&
+                        !src.startsWith("data:image", true) &&
+                        !src.contains("placeholder", true) &&
+                        !src.contains("default-avatar", true)
+                }
         }
         val movie = select("small, .badge").any { it.text().contains("movie", true) } ||
             href.contains("movie", true)
@@ -95,32 +102,59 @@ class Ylnime : MainAPI() {
             .replace(Regex("(?i)\\s*sub indo(\\s+hd)?"), "")
             .trim()
 
-        val poster = normalizeUrl(
-            doc.selectFirst("meta[property=og:image], meta[name=twitter:image]")?.attr("content")
-                ?.takeIf { it.isNotBlank() }
-                ?: doc.selectFirst(
-                    ".series-poster img, .anime-poster img, img.card-img-top, .detail-poster img, .poster img, article img"
-                )?.let { image ->
-                    image.attr("data-src").ifBlank {
-                        image.attr("data-lazy-src").ifBlank { image.attr("src") }
-                    }
+        fun imageFrom(element: Element?): String? {
+            if (element == null) return null
+            return listOf("data-src", "data-lazy-src", "data-original", "data-original-src", "data-lazy", "src", "content")
+                .asSequence()
+                .map { element.attr(it).trim() }
+                .firstOrNull {
+                    it.isNotBlank() && !it.startsWith("data:image", true) &&
+                        !it.contains("placeholder", true) && !it.contains("default-avatar", true)
                 }
-        )
-        val background = normalizeUrl(
-            doc.selectFirst("meta[property=og:image]")?.attr("content")
-        )
+                ?.let { normalizeUrl(it) }
+        }
+
+        // Prefer actual artwork in the detail page; social metadata can contain
+        // the site's generic banner, which was being reused for every anime.
+        val poster = imageFrom(doc.selectFirst(
+            ".series-poster img, .anime-poster img, .detail-poster img, .poster img, " +
+                ".anime-cover img, .cover-image img, .anime-detail img, img.card-img-top"
+        )) ?: imageFrom(doc.selectFirst("meta[property=og:image], meta[name=twitter:image]"))
+
+        val background = imageFrom(doc.selectFirst(
+            ".anime-banner img, .detail-banner img, .series-banner img, .backdrop img, " +
+                ".background img, .cover-bg img, [style*=background-image]"
+        )) ?: imageFrom(doc.selectFirst("meta[property=og:image]"))
+
+        fun isBoilerplate(text: String): Boolean {
+            val value = text.lowercase()
+            return value.contains("nonton streaming") ||
+                value.contains("kualitas 360p") ||
+                value.contains("kualitas 480p") ||
+                value.contains("kualitas 720p") ||
+                value.contains("kualitas 1080p") ||
+                value.contains("update cepat tanpa iklan") ||
+                value.contains("subtitle indonesia, update cepat") ||
+                value.contains("gratis di ylnime") ||
+                value.contains("di ylnime. kualitas")
+        }
+
         val synopsisSelectors = listOf(
             ".synopsis", "#synopsis", ".anime-synopsis", ".series-synopsis",
             ".description", ".anime-description", ".detail-synopsis",
-            "[itemprop=description]", "meta[name=description]"
+            "[itemprop=description]", ".plot", ".story", ".anime-story"
         )
         val synopsis = synopsisSelectors.asSequence().mapNotNull { selector ->
             val element = doc.selectFirst(selector) ?: return@mapNotNull null
-            if (element.tagName() == "meta") element.attr("content").trim()
-            else element.text().trim()
-        }.firstOrNull { it.isNotBlank() && !it.equals(title, true) }
-            ?: doc.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-                ?.takeIf { it.isNotBlank() }
+            element.text().replace(Regex("\\s+"), " ").trim()
+        }.firstOrNull {
+            it.isNotBlank() && !it.equals(title, true) && !isBoilerplate(it)
+        } ?: listOf(
+            doc.selectFirst("meta[property=og:description]")?.attr("content"),
+            doc.selectFirst("meta[name=description]")?.attr("content")
+        ).firstOrNull {
+            !it.isNullOrBlank() && !isBoilerplate(it.trim()) && !it.trim().equals(title, true)
+        }?.trim();
 
         fun infoValue(vararg labels: String): String? {
             val wanted = labels.map { it.lowercase().replace(":", "").trim() }
