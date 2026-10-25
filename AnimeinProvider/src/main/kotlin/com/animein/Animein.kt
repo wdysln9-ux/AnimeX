@@ -157,13 +157,13 @@ class Animein : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "data/home/list_new_episode" to "New Episodes",
-        "3/2/home/hot" to "Hot",
-        "3/2/home/new" to "New Title",
-        "schedule/today" to "Today's Schedule",
-        "data/home/fyp" to "Just For You",
-        "3/2/home/popular" to "Popular",
-        "data/home/list" to "Upcoming"
+        "data/home/list_new_episode" to "Episode Baru",
+        "3/2/home/hot" to "Sedang Hangat",
+        "3/2/home/new" to "Judul Baru",
+        "schedule/today" to "Jadwal Hari ini",
+        "data/home/fyp" to "Jas Por Yu",
+        "3/2/home/popular" to "Paling Populer",
+        "data/home/list" to "Paling Dinanti"
     )
 
     private fun todayDayName(): String {
