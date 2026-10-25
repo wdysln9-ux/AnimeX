@@ -1,10 +1,7 @@
 package com.wdysln9ux.ylnime
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
-import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.jsoup.nodes.Element
 
@@ -117,31 +114,18 @@ class Ylnime : MainAPI() {
                 ?.let { normalizeUrl(it) }
         }
 
-        // Prefer actual artwork in the detail page; social metadata can contain
-        // the site's generic banner, which was being reused for every anime.
-        // YLnime sometimes returns the same generic artwork for multiple titles.
-        // Use AniList/MAL tracker metadata first, then the page-specific artwork.
-        val tracker = try {
-            APIHolder.getTracker(listOf(title), TrackerType.getTypes(TvType.Anime), null, true)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-        // Animein's tracker exposes these IDs directly; YLnime does not define
-        // resolveAnimeIds, so use the same tracker fields without that helper.
-        val malId = tracker?.malId
-        val aniId = tracker?.aniId?.toIntOrNull()
-        val pagePoster = imageFrom(doc.selectFirst(
+        // All detail metadata comes only from YLnime's own HTML page.
+        // Prefer page-specific artwork, with YLnime's own Open Graph image as fallback.
+        val poster = imageFrom(doc.selectFirst(
             ".series-poster img, .anime-poster img, .detail-poster img, .poster img, " +
-                ".anime-cover img, .cover-image img, .anime-detail img, img.card-img-top"
+                ".anime-cover img, .cover-image img, .anime-detail img, img.card-img-top, " +
+                ".entry-content img, .content img"
         )) ?: imageFrom(doc.selectFirst("meta[property=og:image], meta[name=twitter:image]"))
-        val poster = tracker?.image ?: pagePoster
 
-        val pageBackground = imageFrom(doc.selectFirst(
+        val background = imageFrom(doc.selectFirst(
             ".anime-banner img, .detail-banner img, .series-banner img, .backdrop img, " +
                 ".background img, .cover-bg img, [style*=background-image]"
-        )) ?: imageFrom(doc.selectFirst("meta[property=og:image]"))
-        val background = tracker?.cover ?: pageBackground
+        ))
 
         fun isBoilerplate(text: String): Boolean {
             val value = text.lowercase()
@@ -173,8 +157,6 @@ class Ylnime : MainAPI() {
             !it.isNullOrBlank() && !isBoilerplate(it.trim()) && !it.trim().equals(title, true)
         }?.trim()
 
-        // Keep page-specific synopsis when available; YLnime has no shared
-        // fetchAniListPlot helper in this provider module.
         val synopsis = pageSynopsis
 
         fun infoValue(vararg labels: String): String? {
@@ -246,8 +228,6 @@ class Ylnime : MainAPI() {
             this.year = year
             this.duration = duration
             this.showStatus = if (ongoing) ShowStatus.Ongoing else ShowStatus.Completed
-            addMalId(malId)
-            addAniListId(aniId)
         }
     }
 
