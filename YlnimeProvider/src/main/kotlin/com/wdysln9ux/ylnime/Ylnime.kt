@@ -90,9 +90,9 @@ class Ylnime : MainAPI() {
     }
 
     private fun titleKey(value: String): String = value.lowercase()
-        .replace(Regex("\\\\([^)]*\\\\)|\\\\[[^]]*]"), " ")
-        .replace(Regex("(?i)season\\\\s*\\\\d+|part\\\\s*\\\\d+|subtitle indonesia|sub indo"), " ")
-        .replace(Regex("[^\\\\p{L}\\\\p{N}]"), "")
+        .replace(Regex("\\([^)]*\\)|\\[[^]]*]"), " ")
+        .replace(Regex("(?i)season\\s*\\d+|part\\s*\\d+|subtitle indonesia|sub indo"), " ")
+        .replace(Regex("[^\\p{L}\\p{N}]"), "")
 
     // Kitsu supplies episode titles; YLnime remains the source for stream URLs and detail metadata.
     private suspend fun kitsuEpisodeTitles(title: String, year: Int?, episodeNumbers: Set<Int>): Map<Int, String> {
@@ -120,7 +120,7 @@ class Ylnime : MainAPI() {
                 val exact = names.any { it == wanted }
                 val close = names.any { it.length >= 5 && wanted.length >= 5 && (it.contains(wanted) || wanted.contains(it)) }
                 if (!exact && !close) continue
-                val foundYear = Regex("^\\\\d{4}").find(attrs.optString("startDate"))?.value?.toIntOrNull()
+                val foundYear = Regex("^\\d{4}").find(attrs.optString("startDate"))?.value?.toIntOrNull()
                 if (year != null && foundYear != null && kotlin.math.abs(year - foundYear) > 1) continue
                 val score = (if (exact) 100 else 10) - if (year != null && foundYear != null) kotlin.math.abs(year - foundYear) else 0
                 if (score > chosenScore) {
@@ -262,8 +262,8 @@ class Ylnime : MainAPI() {
         val rawEpisodes = episodeAnchors.mapNotNull { anchor ->
             val epUrl = normalizeUrl(anchor.attr("href")) ?: return@mapNotNull null
             if (epUrl == fixedUrl || epUrl.contains("javascript:", true)) return@mapNotNull null
-            val label = anchor.text().replace(Regex("\\\\s+"), " ").trim()
-            val number = Regex("(?i)(?:episode|ep\\\\.?|eps?)\\\\s*[-:#]?\\\\s*(\\\\d+(?:\\\\.\\\\d+)?)")
+            val label = anchor.text().replace(Regex("\\s+"), " ").trim()
+            val number = Regex("(?i)(?:episode|ep\\.?|eps?)\\s*[-:#]?\\s*(\\d+(?:\\.\\d+)?)")
                 .find(label.ifBlank { anchor.attr("title") + " " + epUrl })
                 ?.groupValues?.getOrNull(1)?.toDoubleOrNull()
             if (label.isBlank() && number == null) return@mapNotNull null
