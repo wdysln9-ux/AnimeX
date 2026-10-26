@@ -376,7 +376,7 @@
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/YlnimeProvider.cs3",
         "status": 1,
-        "version": 7,
+        "version": 8,
         "name": "YlnimeProvider",
         "internalName": "YlnimeProvider",
         "authors": [
@@ -393,6 +393,6 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=ylnime.com&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-516e0b4b991da35fd443e42e32716518eb6f8cea10deacbcdfc3b5894ae7f0e4"
+        "fileHash": "sha256-612c69ad32ee7c8dc6043b5e961f13e3510a526c8094f201fe2ce447e413a19f"
     }
 ]
