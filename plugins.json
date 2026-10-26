@@ -132,6 +132,28 @@
         "fileHash": "sha256-b729781fad2b7f809266a937c7dbbfa4369b3742ec2c4e13eb84c04daaf996bd"
     },
     {
+        "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/AniSnatchProvider.cs3",
+        "status": 3,
+        "version": 1,
+        "name": "AniSnatchProvider",
+        "internalName": "AniSnatchProvider",
+        "authors": [
+            "wdysln9-ux"
+        ],
+        "description": "AniSnatch \u2014 Anime streaming with available subtitle tracks",
+        "fileSize": 16192,
+        "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
+        "language": "en",
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "iconUrl": "https://www.google.com/s2/favicons?domain=anisnatch.to&sz=%size%",
+        "apiVersion": 1,
+        "fileHash": "sha256-c08f1c97be9d15a18a3f13960554267b0daef1f9e67b26128a7d8c2184e6f7f5"
+    },
+    {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/AnoboyProvider.cs3",
         "status": 1,
         "version": 6,
