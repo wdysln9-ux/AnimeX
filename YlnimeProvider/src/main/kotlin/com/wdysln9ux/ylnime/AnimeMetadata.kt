@@ -318,3 +318,49 @@ private suspend fun fetchTmdbLogoUrlUncached(
 
     return null
 }
+
+
+data class AniListDetails(
+    val cover: String?,
+    val banner: String?,
+    val description: String?,
+    val year: Int?,
+    val duration: Int?,
+    val genres: List<String>,
+    val status: String?
+)
+
+suspend fun fetchAniListDetails(aniId: Int?): AniListDetails? {
+    if (aniId == null) return null
+    return try {
+        val query = "query { Media(id: $aniId, type: ANIME) { coverImage { extraLarge large } bannerImage description(asHtml: false) seasonYear startDate { year } duration genres status format } }"
+        val response = JSONObject(app.post(
+            "https://graphql.anilist.co",
+            json = mapOf("query" to query)
+        ).text)
+        val media = response.optJSONObject("data")?.optJSONObject("Media") ?: return null
+        val coverImage = media.optJSONObject("coverImage")
+        val year = media.optInt("seasonYear", 0).takeIf { it > 0 }
+            ?: media.optJSONObject("startDate")?.optInt("year", 0)?.takeIf { it > 0 }
+        val description = media.optString("description").takeIf { it.isNotBlank() && it != "null" }
+        val banner = media.optString("bannerImage").takeIf { it.isNotBlank() && it != "null" }
+        val cover = coverImage?.optString("extraLarge")?.takeIf { it.isNotBlank() && it != "null" }
+            ?: coverImage?.optString("large")?.takeIf { it.isNotBlank() && it != "null" }
+        val genresJson = media.optJSONArray("genres")
+        val genres = (0 until (genresJson?.length() ?: 0)).mapNotNull { i ->
+            genresJson?.optString(i)?.takeIf { it.isNotBlank() && it != "null" }
+        }
+        AniListDetails(
+            cover = cover,
+            banner = banner,
+            description = description,
+            year = year,
+            duration = media.optInt("duration", 0).takeIf { it > 0 },
+            genres = genres,
+            status = media.optString("status").takeIf { it.isNotBlank() && it != "null" }
+        )
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        null
+    }
+}
