@@ -184,7 +184,11 @@ class Ylnime : MainAPI() {
 
         // Use AniList/ani.zip for artwork and anime metadata; YLnime is only the source
         // for playable pages, episode URLs, and stream links.
-        val resolvedIds = resolveAnimeIds(listOf(title), TvType.Anime, null, null, null)
+        val metadataType = if (
+            fixedUrl.contains("movie", true) ||
+            doc.select(".badge, small, .type").any { it.text().contains("movie", true) }
+        ) TvType.AnimeMovie else TvType.Anime
+        val resolvedIds = resolveAnimeIds(listOf(title), metadataType, null, null, null)
         val aniZip = fetchAniZipMeta(resolvedIds.malId, resolvedIds.aniId)
         val aniList = fetchAniListDetails(resolvedIds.aniId)
 
@@ -208,7 +212,6 @@ class Ylnime : MainAPI() {
         val duration = aniList?.duration
         val tags = aniList?.genres.orEmpty()
 
-        val allText = doc.text()
         val ongoing = aniList?.status == "RELEASING"
         val episodeAnchors = doc.select("a[href*=episode=], a[href*=episode-], a[href*=episode/], .episode-list a, .episodes a")
         val rawEpisodes = episodeAnchors.mapNotNull { anchor ->
@@ -241,8 +244,9 @@ class Ylnime : MainAPI() {
             return newMovieLoadResponse(
                 title, fixedUrl, TvType.AnimeMovie, episodes.firstOrNull()?.data ?: fixedUrl
             ) {
+                this.engName = title
                 this.posterUrl = poster
-                this.backgroundPosterUrl = background
+                this.backgroundPosterUrl = background ?: poster
                 this.plot = synopsis
                 this.tags = tags.ifEmpty { null }
                 this.year = year
@@ -250,8 +254,9 @@ class Ylnime : MainAPI() {
             }
         }
         return newTvSeriesLoadResponse(title, fixedUrl, TvType.Anime, episodes) {
+            this.engName = title
             this.posterUrl = poster
-            this.backgroundPosterUrl = background
+            this.backgroundPosterUrl = background ?: poster
             this.plot = synopsis
             this.tags = tags.ifEmpty { null }
             this.year = year
