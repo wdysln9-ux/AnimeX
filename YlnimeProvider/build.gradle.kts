@@ -1,4 +1,4 @@
-version = 9
+version = 10
 cloudstream {
     description = "YLnime — Anime Subtitle Indonesia"
     language = "id"
