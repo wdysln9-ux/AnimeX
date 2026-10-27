@@ -238,13 +238,11 @@ class Ylnime : MainAPI() {
         }
 
         val movie = fixedUrl.contains("movie", true) ||
-            doc.select(".badge, small, .type").any { it.text().contains("movie", true) } ||
-            infoValue("tipe", "type", "format")?.contains("movie", true) == true
+            doc.select(".badge, small, .type").any { it.text().contains("movie", true) }
         if (movie && episodes.size <= 1) {
             return newMovieLoadResponse(
                 title, fixedUrl, TvType.AnimeMovie, episodes.firstOrNull()?.data ?: fixedUrl
             ) {
-                this.engName = title
                 this.posterUrl = poster
                 this.backgroundPosterUrl = background ?: poster
                 this.plot = synopsis
@@ -254,7 +252,6 @@ class Ylnime : MainAPI() {
             }
         }
         return newTvSeriesLoadResponse(title, fixedUrl, TvType.Anime, episodes) {
-            this.engName = title
             this.posterUrl = poster
             this.backgroundPosterUrl = background ?: poster
             this.plot = synopsis
