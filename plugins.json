@@ -398,14 +398,14 @@
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/YlnimeProvider.cs3",
         "status": 1,
-        "version": 9,
+        "version": 12,
         "name": "YlnimeProvider",
         "internalName": "YlnimeProvider",
         "authors": [
             "wdysln9-ux"
         ],
         "description": "YLnime \u2014 Anime Subtitle Indonesia",
-        "fileSize": 51033,
+        "fileSize": 52785,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "id",
         "tvTypes": [
@@ -415,6 +415,6 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=ylnime.com&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-1bb6c685b7fdce52c10797d712ead383ea752b27396482f5e2c59c6866b950d2"
+        "fileHash": "sha256-ca6890f8b32aea7125450eb12d4d6483003e2d2571ec2c21359453c7f45d5543"
     }
 ]
