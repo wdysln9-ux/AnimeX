@@ -182,82 +182,34 @@ class Ylnime : MainAPI() {
                 ?.let { normalizeUrl(it) }
         }
 
-        // All detail metadata comes only from YLnime's own HTML page.
-        // Prefer page-specific artwork, with YLnime's own Open Graph image as fallback.
-        val poster = imageFrom(doc.selectFirst(
-            ".series-poster img, .anime-poster img, .detail-poster img, .poster img, " +
-                ".anime-cover img, .cover-image img, .anime-detail img, img.card-img-top, " +
-                ".entry-content img, .content img"
-        )) ?: imageFrom(doc.selectFirst("meta[property=og:image], meta[name=twitter:image]"))
+        // Use AniList/ani.zip for artwork and anime metadata; YLnime is only the source
+        // for playable pages, episode URLs, and stream links.
+        val resolvedIds = resolveAnimeIds(listOf(title), TvType.Anime, null, null, null)
+        val aniZip = fetchAniZipMeta(resolvedIds.malId, resolvedIds.aniId)
+        val aniList = fetchAniListDetails(resolvedIds.aniId)
 
-        val background = imageFrom(doc.selectFirst(
-            ".anime-banner img, .detail-banner img, .series-banner img, .backdrop img, " +
-                ".background img, .cover-bg img, [style*=background-image]"
-        ))
-
-        fun isBoilerplate(text: String): Boolean {
-            val value = text.lowercase()
-            return value.contains("nonton streaming") ||
-                value.contains("kualitas 360p") ||
-                value.contains("kualitas 480p") ||
-                value.contains("kualitas 720p") ||
-                value.contains("kualitas 1080p") ||
-                value.contains("update cepat tanpa iklan") ||
-                value.contains("subtitle indonesia, update cepat") ||
-                value.contains("gratis di ylnime") ||
-                value.contains("di ylnime. kualitas")
-        }
-
-        val synopsisSelectors = listOf(
-            ".synopsis", "#synopsis", ".anime-synopsis", ".series-synopsis",
-            ".description", ".anime-description", ".detail-synopsis",
-            "[itemprop=description]", ".plot", ".story", ".anime-story"
-        )
-        val pageSynopsis = synopsisSelectors.asSequence().mapNotNull { selector ->
-            val element = doc.selectFirst(selector) ?: return@mapNotNull null
-            element.text().replace(Regex("\\s+"), " ").trim()
-        }.firstOrNull {
-            it.isNotBlank() && !it.equals(title, true) && !isBoilerplate(it)
-        } ?: listOf(
-            doc.selectFirst("meta[property=og:description]")?.attr("content"),
-            doc.selectFirst("meta[name=description]")?.attr("content")
-        ).firstOrNull {
-            !it.isNullOrBlank() && !isBoilerplate(it.trim()) && !it.trim().equals(title, true)
-        }?.trim()
-
-        val synopsis = pageSynopsis
-
-        fun infoValue(vararg labels: String): String? {
-            val wanted = labels.map { it.lowercase().replace(":", "").trim() }
-            for (row in doc.select("tr, .info-item, .anime-info li, .detail-info li, .series-info li, .meta-item")) {
-                val label = row.selectFirst("th, .label, .name, strong, b")?.text()
-                    ?: row.ownText().substringBefore(":")
-                if (wanted.any { label.lowercase().replace(":", "").trim().contains(it) }) {
-                    val value = row.selectFirst("td, .value, .content")?.text()
-                        ?: row.text().substringAfter(":", "").trim()
-                    if (value.isNotBlank() && value != row.text().trim()) return value
-                }
+        fun externalImage(vararg preferredTypes: String): String? {
+            val images = aniZip?.images.orEmpty()
+            for (preferred in preferredTypes) {
+                val match = images.firstOrNull {
+                    it.coverType?.equals(preferred, true) == true && !it.url.isNullOrBlank()
+                }?.url
+                if (!match.isNullOrBlank()) return match
             }
             return null
         }
 
-        val allText = doc.text()
-        val year = Regex("(?:19|20)\\d{2}").find(
-            infoValue("tahun", "year", "rilis", "released") ?: allText
-        )?.value?.toIntOrNull()
-        val duration = Regex("(\\d{1,3})\\s*(?:menit|min)").find(
-            infoValue("durasi", "duration") ?: allText
-        )?.groupValues?.getOrNull(1)?.toIntOrNull()
-        val tags = doc.select(
-            ".genres a, .genre a, a[href*=genre], .anime-genres a, .badge.genre, .tags a"
-        ).map { it.text().trim() }
-            .filter { it.length > 1 && !it.contains("episode", true) &&
-                !it.contains("sub indo", true) && !it.contains("watch", true) }
-            .distinct()
+        val poster = externalImage("Poster", "Cover", "Key Visual") ?: aniList?.cover
+        val background = externalImage("Fanart", "Banner", "Background") ?: aniList?.banner
+        val synopsis = aniZip?.description?.takeIf { it.isNotBlank() }
+            ?: fetchAniListPlot(resolvedIds.malId, resolvedIds.aniId)
+            ?: aniList?.description
+        val year = aniList?.year
+        val duration = aniList?.duration
+        val tags = aniList?.genres.orEmpty()
 
-        val ongoing = Regex("(?i)ongoing|sedang tayang|currently airing").containsMatchIn(
-            infoValue("status") ?: allText
-        )
+        val allText = doc.text()
+        val ongoing = aniList?.status == "RELEASING"
         val episodeAnchors = doc.select("a[href*=episode=], a[href*=episode-], a[href*=episode/], .episode-list a, .episodes a")
         val rawEpisodes = episodeAnchors.mapNotNull { anchor ->
             val epUrl = normalizeUrl(anchor.attr("href")) ?: return@mapNotNull null
