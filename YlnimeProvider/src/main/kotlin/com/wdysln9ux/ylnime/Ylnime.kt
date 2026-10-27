@@ -273,8 +273,11 @@ class Ylnime : MainAPI() {
         val kitsuTitles = kitsuEpisodeTitles(title, year, rawEpisodes.mapNotNull { it.third }.toSet())
         val episodes = rawEpisodes.map { (epUrl, pageLabel, number) ->
             newEpisode(epUrl) {
+                // Never use YLnime's episode label as the displayed title.
+                // Prefer Kitsu's canonical episode title; if unavailable, show a neutral number.
                 name = number?.let { kitsuTitles[it] }?.takeIf { it.isNotBlank() }
-                    ?: pageLabel.ifBlank { number?.let { "Episode $it" } ?: "Episode" }
+                    ?: number?.let { "Episode $it" }
+                    ?: "Episode"
                 episode = number
             }
         }
