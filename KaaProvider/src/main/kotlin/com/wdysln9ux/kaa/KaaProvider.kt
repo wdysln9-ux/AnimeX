@@ -10,15 +10,21 @@ import com.lagradost.cloudstream3.utils.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
 
 class KaaProvider : MainAPI() {
     override var mainUrl = "https://kaa.lt"
     override var name = "KickAssAnime"
     override var lang = "en"
-    override val hasMainPage = false
+    override val hasMainPage = true
     override val hasQuickSearch = true
     override val instantLinkLoading = true
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
+
+    override val mainPage = mainPageOf(
+        "recent" to "Recently Added"
+    )
 
     private val gson = Gson()
     private val headers = mapOf(
@@ -68,6 +74,42 @@ class KaaProvider : MainAPI() {
         return newAnimeSearchResponse(title, slug, type) {
             posterUrl = poster
         }
+    }
+
+    private fun Element.toRecentSearchResponse(): SearchResponse? {
+        val href = selectFirst("a[href]")?.absUrl("href")?.takeIf {
+            it.startsWith(mainUrl) && (it.contains("/anime/") || it.contains("/show/"))
+        } ?: return null
+        val image = selectFirst("img")
+        val title = selectFirst("[title]")?.attr("title")?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: image?.attr("alt")?.trim()?.takeIf { it.isNotBlank() }
+            ?: selectFirst("h2, h3, .title")?.text()?.trim()?.takeIf { it.isNotBlank() }
+            ?: return null
+        val poster = listOf("src", "data-src", "data-lazy-src", "data-original")
+            .firstNotNullOfOrNull { key -> image?.attr(key)?.takeIf { it.isNotBlank() } }
+            ?.let { raw -> if (raw.startsWith("//")) "https:$raw" else raw }
+        val slug = href.substringAfterLast('/').substringBefore('?')
+        val type = if (title.contains("movie", true)) TvType.AnimeMovie else TvType.Anime
+        return newAnimeSearchResponse(title, slug, type) {
+            posterUrl = poster
+        }
+    }
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page <= 1) "$mainUrl/recent" else "$mainUrl/recent?page=$page"
+        val document = Jsoup.parse(app.get(url, headers = headers).text, mainUrl)
+        val results = document.select("a[href]")
+            .mapNotNull { it.toRecentSearchResponse() }
+            .distinctBy { it.url }
+        return newHomePageResponse(
+            HomePageList(
+                name = request.name,
+                list = results,
+                isHorizontalImages = false
+            ),
+            hasNext = results.isNotEmpty()
+        )
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
