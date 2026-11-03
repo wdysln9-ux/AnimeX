@@ -1,4 +1,4 @@
-version = 2
+version = 4
 
 cloudstream {
     description = "KickAssAnime — Anime with SUB/DUB and external subtitles"
