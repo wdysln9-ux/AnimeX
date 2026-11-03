@@ -230,7 +230,7 @@
             "wdysln9-ux"
         ],
         "description": "KickAssAnime \u2014 Anime with SUB/DUB and external subtitles",
-        "fileSize": 24571,
+        "fileSize": 26674,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "en",
         "tvTypes": [
@@ -240,7 +240,7 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=kaa.lt&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-02ffe4bacf10e39f30b6bd3916f8d12a1993262d5e03db71043ec01e6728bc4a"
+        "fileHash": "sha256-74418386df6127930d746f155d9b43038cbf7c828497781e9d58e34162d4f8db"
     },
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/KuramanimeProvider.cs3",
