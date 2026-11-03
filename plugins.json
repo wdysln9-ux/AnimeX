@@ -221,6 +221,28 @@
         "fileHash": "sha256-0b077d48bc00ada5e2dc43274a14a28e599c991691e966ebf47a3c2271d56ba5"
     },
     {
+        "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/KaaProvider.cs3",
+        "status": 3,
+        "version": 1,
+        "name": "KaaProvider",
+        "internalName": "KaaProvider",
+        "authors": [
+            "wdysln9-ux"
+        ],
+        "description": "KickAssAnime \u2014 Anime with SUB/DUB and external subtitles",
+        "fileSize": 24570,
+        "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
+        "language": "en",
+        "tvTypes": [
+            "Anime",
+            "AnimeMovie",
+            "OVA"
+        ],
+        "iconUrl": "https://www.google.com/s2/favicons?domain=kaa.lt&sz=%size%",
+        "apiVersion": 1,
+        "fileHash": "sha256-73691aeede40e6d40a3a8fd5fb9caee7b72b34d1f5821ba857ca92a88fd8cbc5"
+    },
+    {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/KuramanimeProvider.cs3",
         "status": 1,
         "version": 6,
@@ -263,26 +285,6 @@
         "iconUrl": "https://play-lh.googleusercontent.com/EFMkS1T-8txjLFIl9QxjcTRLa7a7Muv08C04b7ongYgodoY_b2T3GpxzGAQEx-eitfQ=w256",
         "apiVersion": 1,
         "fileHash": "sha256-c0cacc9e25e9c073d6edd4d6c1bff4c6e523e03053426a7de6d26779cc8b06ea"
-    },
-    {
-        "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/NekopoiProvider.cs3",
-        "status": 1,
-        "version": 4,
-        "name": "NekopoiProvider",
-        "internalName": "NekopoiProvider",
-        "authors": [
-            "Miku"
-        ],
-        "description": "NekoPoi \u2014 Streaming Hentai, Porn and JAV Subtitle Indonesia",
-        "fileSize": 42820,
-        "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
-        "language": "id",
-        "tvTypes": [
-            "NSFW"
-        ],
-        "iconUrl": "https://www.google.com/s2/favicons?domain=nekopoi.care&sz=%size%",
-        "apiVersion": 1,
-        "fileHash": "sha256-953734b5f45d609520f25a8a6f462ab8bb2902d44c8398dc0e3d3a88d8c44ecc"
     },
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/NimegamiProvider.cs3",
