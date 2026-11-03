@@ -223,14 +223,14 @@
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/KaaProvider.cs3",
         "status": 1,
-        "version": 2,
+        "version": 4,
         "name": "KaaProvider",
         "internalName": "KaaProvider",
         "authors": [
             "wdysln9-ux"
         ],
         "description": "KickAssAnime \u2014 Anime with SUB/DUB and external subtitles",
-        "fileSize": 26674,
+        "fileSize": 26721,
         "repositoryUrl": "https://github.com/wdysln9-ux/AnimeX",
         "language": "en",
         "tvTypes": [
@@ -240,7 +240,7 @@
         ],
         "iconUrl": "https://www.google.com/s2/favicons?domain=kaa.lt&sz=%size%",
         "apiVersion": 1,
-        "fileHash": "sha256-74418386df6127930d746f155d9b43038cbf7c828497781e9d58e34162d4f8db"
+        "fileHash": "sha256-a83e1bb8322d6b297852c50ecfea0e73ccab76a46408f610b9cf6fdf19411bb8"
     },
     {
         "url": "https://raw.githubusercontent.com/wdysln9-ux/AnimeX/builds/KuramanimeProvider.cs3",
