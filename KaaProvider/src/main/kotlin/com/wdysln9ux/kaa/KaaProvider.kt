@@ -86,6 +86,7 @@ class KaaProvider : MainAPI() {
             ?: image?.attr("alt")?.trim()?.takeIf { it.isNotBlank() }
             ?: selectFirst("h2, h3, .title")?.text()?.trim()?.takeIf { it.isNotBlank() }
             ?: return null
+        if (title.contains("uncensored", true) || title.contains("hentai", true) || title.contains("adult", true)) return null
         val poster = listOf("src", "data-src", "data-lazy-src", "data-original")
             .firstNotNullOfOrNull { key -> image?.attr(key)?.takeIf { it.isNotBlank() } }
             ?.let { raw -> if (raw.startsWith("//")) "https:$raw" else raw }
